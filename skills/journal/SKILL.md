@@ -1,118 +1,72 @@
+# How I Built a Personal Work Journal Dashboard with Claude
+
+I've been keeping a work journal for almost 1.5 years now. Nothing fancy: just a Google Doc where I dump daily notes: what I shipped, what frustrated me, who I worked with, how I felt. After a year and a half, I had a wall of text that I never actually read back.
+
+Then I thought: what if Claude could read it *for* me?
+
+---
+
+
+## The idea: a Claude "skill"
+
+The inspiration came from a weekly ritual at my company: every Friday we have a Company Standup where each person shares the highlights and lowlights of their week. I always found myself scrambling to remember what I'd actually done, mentally skimming five days of work in thirty seconds while someone else was still talking.
+
+I thought: I already have all of this written down. I just need something to read it back to me, and ideally tell me more than I'd remember on my own.
+
+That's when I started building a Claude skill around my journal. I use Claude Code with a custom skills system (essentially markdown files that tell Claude how to handle specific commands). When I type `/journal`, Claude reads a `SKILL.md` file and knows exactly what to do: read my journal from Google Drive, analyze it, and render an interactive dashboard.
+
+The skill file looks like this:
+
+```md
 ---
 name: journal
 description: >
-  Work journal dashboard skill. Reads your engineering/work journal from Google Drive,
-  a pasted text, or a local file, analyzes the entries, and renders an interactive
-  dashboard showing highlights, lowlights, sentiment, appreciation, pain points,
-  meeting load, feature delivery, collaboration map, and skills picked up.
+  Work journal dashboard skill. Reads your work journal from Google Drive,
+  a pasted text, or a local file, analyzes the entries, and renders an
+  interactive dashboard.
 
-  Trigger this skill whenever the user says any of these:
+  Trigger when user says:
   - /journal
-  - "show my journal dashboard"
-  - "show my work dashboard"
-  - "analyze my journal"
+  - "show my dashboard"
   - "how was my week"
   - "what did I ship this week"
-  - "show highlights"
-  - "how am I doing at work"
   - any mention of viewing or analyzing their work journal
-
-  Always use this skill proactively when the user seems to want a summary
-  or reflection of their work period, even if they don't say "journal" explicitly.
-compatibility: "Google Drive MCP recommended. Works without it via paste or file upload."
 ---
+```
 
-# Journal Dashboard Skill
-
-## What this skill does
-
-1. Reads the user's work journal (from Google Drive, paste, or file)
-2. Claude analyzes the raw text and extracts structured data
-3. Renders an interactive dashboard with 9 tabs
+The description isn't just documentation: it's what Claude uses to decide *when* to activate this skill. Any phrasing works. As long as the intent is there, Claude picks it up.
 
 ---
 
-## Step 0 — First time setup
+## How it works: three steps
 
-If this is the **first time** the user runs `/journal` in this conversation, Claude must ask:
+### Step 1: Read the journal from Google Drive
 
-> "To get started, I need access to your journal. How would you like to provide it?"
->
-> **Option A — Google Drive** (recommended): "Paste your Google Doc URL or file ID. Make sure you have the Google Drive connector enabled in Claude settings."
->
-> **Option B — Paste**: "Paste your journal text directly into the chat."
->
-> **Option C — File**: "Upload a .txt or .md file with your journal entries."
-
-Once the user provides the source, remember it for the rest of the conversation.
-If the user has already provided their journal source earlier in the conversation, skip this step.
-
-### How to get the Google Doc file ID
-
-The file ID is the long string in the Google Doc URL:
-```
-https://docs.google.com/document/d/FILE_ID_IS_HERE/edit
-```
-
-Example:
-```
-https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789ABCDEFG/edit
-                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                                    This part is the file ID
-```
-
----
-
-## Step 1 — Read the journal
-
-### If Google Drive:
-Use the Google Drive `read_file_content` tool with the file ID the user provided.
+Claude has a Google Drive MCP (Model Context Protocol) connection. With one tool call, it fetches the full document:
 
 ```
-fileId: <provided by user>
+Google Drive: read_file_content
+fileId: 1Y8rsID6YF3Zhmnbt8t-...
 ```
 
-If the tool is unavailable or fails:
-> "It looks like Google Drive isn't connected. You can enable it in Claude Settings > Connectors, or paste your journal text directly here."
+My journal format is simple: bold date headings with bullet points underneath.
 
-### If paste or file:
-Use the text the user provided directly. No tool call needed.
-
----
-
-## Step 2 — Detect journal format
-
-The skill supports any free-form journal format. Common patterns:
-
-**Format A — Bold date headings (default):**
 ```
-**27.03**
-- Shipped the new dashboard feature
-- 1-1 with team lead, good feedback
+**14.03**
+- Got good feedback from Sarah in standup
+- Helped deploy the new search feature to prod
+- Started working on the notification redesign
 ```
 
-**Format B — Markdown headings:**
-```
-## March 27
-- Shipped the new dashboard feature
-```
+No schema, no special syntax. Just notes.
 
-**Format C — Plain text with date prefix:**
-```
-2024-03-27: Shipped dashboard, had 1-1 with lead
-```
+### Step 2: Claude analyzes the text directly
 
-Infer the format automatically. Do not require the user to specify it.
+One important architectural note: **the Anthropic API cannot be called from inside a browser widget** due to sandbox restrictions. Claude analyzes the journal in the conversation itself, not at render time.
 
----
+Instead, Claude itself analyzes the journal text in the conversation and produces a structured JSON object. This gets embedded directly into the widget as a `const D = {...}`. No runtime API calls needed.
 
-## Step 3 — Analyze the content
-
-**CRITICAL: Do NOT call the Anthropic API from inside the widget HTML/JS. It will fail.**
-Instead, Claude analyzes the journal text directly in the conversation and produces
-a structured JSON object, which gets embedded into the widget as `const D = {...}`.
-
-Analyze the full journal and produce a JSON object with this schema:
+The JSON schema covers everything I care about:
 
 ```json
 {
@@ -122,161 +76,111 @@ Analyze the full journal and produce a JSON object with this schema:
       "week_highlights": ["..."],
       "week_lowlights": ["..."],
       "days": [
-        {
-          "date": "23.03",
-          "sentiment": "great|good|ok|mixed|tired|rough|angry|drained|low",
-          "pos": 70,
-          "neg": 10
-        }
+        { "date": "23.03", "sentiment": "good", "pos": 65, "neg": 10 }
       ],
       "meetings_regular": 5,
-      "meetings_friction": 2
+      "meetings_friction": 0
     }
   ],
-  "month": {
-    "prs_opened": 10,
-    "prs_reviewed": 8,
-    "features_shipped": ["Feature A", "Feature B"],
-    "overtime_days": 3,
-    "highlights": ["..."],
-    "lowlights": ["..."]
-  },
   "appreciation": [
-    { "from": "Person", "text": "...", "date": "27.03" }
+    { "from": "Sarah", "text": "Really clean PR structure, easy to review...", "date": "14.03" }
   ],
   "pain_points": [
-    { "label": "Theme name", "count": 5 }
+    { "label": "Local dev / deploy process", "count": 12 }
   ],
-  "overtime_log": [
-    { "date": "27.03", "reason": "..." }
-  ],
-  "features": [
-    { "name": "Feature A", "start": 0, "end": 5, "color": "#1D9E75" }
-  ],
-  "totalDays": 30,
   "people": [
-    { "name": "Alex", "initials": "AL", "role": "Tech lead", "score": 10, "tags": ["reviews", "pairing"] }
+    { "name": "Sarah", "score": 14, "tags": ["pairing", "reviews"] }
   ],
   "skills": [
-    { "name": "Git worktree", "date": "13.04", "type": "skill", "desc": "First time used for parallel branch work" }
+    { "name": "Git worktree", "date": "13.04", "type": "skill" }
   ]
 }
 ```
 
-### Week grouping rules
+The analysis rules I give Claude matter a lot here. For example:
 
-- Weeks run **Monday to Friday**.
-- Group journal entries by their calendar week (Mon–Fri).
-- If a date falls on a weekend, attach it to the nearest weekday week.
-- Label weeks as `"W1: 23–27 Mar"`, `"W2: 30 Mar–2 Apr"`, etc.
-- The **current week** is the most recent Mon–Fri period that has at least one entry.
-- Do not mix dates from different calendar weeks into the same week group.
-- If the journal spans less than a week, treat everything as "This week".
+- `appreciation`: only include *explicitly* positive feedback from others, no self-praise
+- `pain_points.count`: count by how many distinct days mention that theme
+- `sentiment pos + neg`: should sum to at most 90, leaving room for neutral days
 
-### Journal entry conventions
+### Step 3: Render an interactive dashboard
 
-- Bold bullets (e.g. `**did X**`) signal more important items — weight them higher in highlights.
-- No explicit categories — infer them from content.
+Claude uses a visualizer tool to render an HTML widget inline in the chat. The widget has 9 tabs:
 
-### Analysis rules
+| Tab | What it shows |
+|-----|---------------|
+| This week | Highlights and challenges for current + previous week |
+| Full month | PR count, features shipped, overtime days |
+| Sentiment | Daily mood bars per week (green = positive, red = negative) |
+| Appreciation | Public feedback received from teammates |
+| Pain points | Frequency bars for recurring frustrations |
+| Meeting load | Stacked bar chart: regular vs friction meetings per week |
+| Feature delivery | Gantt-style bars from start to prod, colored by speed |
+| Collaboration | Who I worked with most, and how |
+| Skills picked up | Tools and techniques learned, with date and context |
 
-**General:**
-- `sentiment` and `pos`/`neg`: pos + neg should sum to at most 90 (leave room for neutral).
+All styling uses CSS variables, so it adapts to light and dark mode automatically.
 
-**Metrics** — if not mentioned in journal, set to 0 or omit:
-- `prs_opened` / `prs_reviewed`: count explicit PR mentions
-- `overtime_days`: count days with explicit overtime or after-hours mentions
-- `features_shipped`: only count features that reached prod/merge
+Here's what it looks like:
 
-**Appreciation:**
-- Only include explicitly positive feedback FROM others TO the user
-- Do not include self-assessment or general positive days
+![Full month tab showing PRs opened, features shipped, and month highlights](screenshot-1-full-month.png)
 
-**Pain points:**
-- Count by how many distinct days mention that theme, not total mentions
-- Label them clearly and concisely (e.g. "Slow CI pipeline", "Unclear requirements")
+![Appreciation tab showing positive feedback from teammates](screenshot-2-appreciation.png)
 
-**Features:**
-- `start` and `end`: days since journal start (day 0 = first journal entry)
-- `totalDays`: total span of the entire journal
-- Color by speed: ≤5 days = `#1D9E75` (green), 6–15 days = `#378ADD` (blue), 15+ days = `#BA7517` (amber)
+![Pain points tab showing frequency bars and overtime log](screenshot-3-pain-points.png)
 
-**People:**
-- `score`: count of meaningful interactions (mentions, sessions, PR reviews, calls)
-- `initials`: first two letters of first name, or first letter of each word for two-word names
-- `role`: infer from context if not explicit (e.g. "Tech lead", "PM", "Designer")
-
-**Skills:**
-- `type`: one of `"tool"`, `"platform"`, or `"skill"`
-  - tool: software, CLI, library (e.g. Git, Figma, Langsmith)
-  - platform: internal systems, cloud platforms (e.g. AWS, internal deploy tool)
-  - skill: practices, techniques (e.g. spec-driven dev, ticket scoping)
-- Only include skills mentioned as new or first-time
-
-**Meetings:**
-- `meetings_regular`: estimated count of planned meetings that week
-- `meetings_friction`: meetings that ran over, were unplanned, or caused stress
+![Meeting load tab showing stacked bar chart of regular vs friction meetings](screenshot-4-meetings.png)
 
 ---
 
-## Step 4 — Render the dashboard
+## What I actually learned from it
 
-Call `visualize:read_me` with modules `["interactive", "chart", "data_viz"]` first.
+A year and a half of data, visualized, told me things I hadn't consciously registered:
 
-Then call `visualize:show_widget` with the full dashboard HTML.
-Embed the analyzed data inline as `const D = {...}` — no runtime API calls.
+**The notification redesign took 18 days**, nearly 3x longer than the search feature (6 days). The journal shows why: repeated interruptions, unclear API ownership, and a PM pushing for delivery before the spec was settled.
 
-### Dashboard — 9 tabs
+**My worst weeks weren't about the work**, they were about communication. Week 4 had the most "friction" meetings and the lowest sentiment scores, all tied to one recurring dynamic with a teammate.
 
-| Tab | Content |
-|-----|---------|
-| **This week** | Highlight/lowlight cards for the **current week only** |
-| **Full month** | Metric cards + highlights/lowlights + shipped feature pills |
-| **Sentiment** | Week selector + daily mood bars (green=positive, red=negative) |
-| **Appreciation** | Positive feedback cards with person badge, quote, date |
-| **Pain points** | Frequency bars + overtime log |
-| **Meeting load** | Stacked bar chart: regular vs friction meetings per week |
-| **Feature delivery** | Gantt-style bars: one row per feature, width = days, color = speed |
-| **Collaboration** | Person cards grid with avatar, role, interaction bar, tags |
-| **Skills picked up** | Card grid with type badge, name, date, description |
+**I picked up 11 new tools and skills in 6 weeks**, seeing it laid out as a card grid made me realize how much ground I'd covered during onboarding, even when it felt chaotic.
 
-### "This week" tab — important rule
-
-Show **only the current week** (the most recent Mon–Fri period with entries).
-Do NOT also render the previous week in this tab.
-Label it clearly, e.g. `"Current — W8: 8–12 May"`.
-
-### Design rules
-
-- Use CSS variables for all colors — light/dark mode safe
-- Highlight cards: `#EAF3DE` bg / `#C0DD97` border for highlights
-- Lowlight cards: `#FCEBEB` bg / `#F7C1C1` border for lowlights
-- Sentiment bars: `#639922` positive, `#E24B4A` negative
-- Appreciation badges: `#E6F1FB` bg, `#0C447C` text
-- Skills badge colors: tool=blue (`#E6F1FB`/`#0C447C`), platform=teal (`#E1F5EE`/`#085041`), skill=purple (`#EEEDFE`/`#3C3489`)
-- Person avatars: unique color pair per person — pick from a diverse palette
-- Chart.js for meeting load bar chart — load from cdnjs, custom HTML legend
-- All data embedded — no loading states needed
+**The Appreciation tab is underrated.** On a rough day, scrolling through actual quotes from teammates is genuinely useful.
 
 ---
 
-## Step 5 — After rendering
+## The skill file: what makes it reusable
 
-Say one short line summarizing the most notable thing from this period.
+The whole thing is driven by a single `SKILL.md` file. When I want to update what the dashboard shows, I just edit the file. No code deployment, no config changes. The skill tells Claude:
 
-Examples:
-- "This week you shipped Feature A and received positive feedback from your lead."
-- "Looks like a tough week — lots of friction meetings and overtime logged."
+- When to trigger (any phrasing, any language)
+- Where to read data from (Google Drive file ID)
+- What JSON schema to produce
+- What tabs to render and how
+
+This is what makes it powerful: the "app" lives in a markdown file, and Claude is the runtime.
 
 ---
 
-## Error handling
+## Try it yourself
 
-| Situation | Response |
-|-----------|----------|
-| Google Drive not connected | Ask user to connect it or paste journal text |
-| File ID invalid / access denied | Ask user to check sharing settings or paste text |
-| Journal has no dates | Parse as a single period, label as "This period" |
-| Journal too short (< 3 days) | Render what's available, note limited data |
-| No PRs / features mentioned | Set counts to 0, skip those metrics gracefully |
-| No appreciation entries found | Show empty state: "No explicit appreciation entries logged yet." |
+The skill is open source. Install it in one line:
+
+```bash
+npx skills add github.com/mjdashtaki/mj-skills
+```
+
+Or clone the repo directly: [github.com/mjdashtaki/mj-skills](https://github.com/mjdashtaki/mj-skills)
+
+The skill supports three journal sources out of the box: Google Drive (via the Drive connector), direct paste, or a `.txt`/`.md` file upload. No hardcoded file IDs: Claude asks you on first run.
+
+If you want to build it yourself from scratch, the core idea works with any journal format:
+
+1. Keep a simple daily log (bullet points are enough)
+2. Write a `SKILL.md` that tells Claude when to activate and what to analyze
+3. Define the JSON schema for the data you care about
+4. Let Claude analyze and render. No backend needed.
+
+The hardest part isn't the code. It's deciding what questions you actually want to answer about your own work. Start there, and work backwards.
+
+---
+
+*I write about frontend engineering, AI tooling, and developer experience. If you're building something similar, I'd love to hear about it.*
