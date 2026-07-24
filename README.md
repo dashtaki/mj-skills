@@ -22,16 +22,23 @@ An interactive work journal dashboard that reads your engineering journal and re
 | Collaboration | Teammate cards with interaction scores and tags |
 | Skills picked up | New tools, platforms, and techniques learned |
 
+---
+
 ### Screenshots
 
+#### Month
 <img src="assets/month.png" alt="Journal Dashboard Screenshots" width="600" />
 
+#### Sentiments
 <img src="assets/sentiment.png" alt="Journal Dashboard Screenshots" width="600" />
 
+#### Appreciations
 <img src="assets/appreciation.png" alt="Journal Dashboard Screenshots" width="600" />
 
+#### Features
 <img src="assets/features.png" alt="Journal Dashboard Screenshots" width="600" />
 
+#### Pain Points
 <img src="assets/pain-points.png" alt="Journal Dashboard Screenshots" width="600" />
 
 ## Install
