@@ -26,7 +26,7 @@ An interactive work journal dashboard that reads your engineering journal and re
 
 ### Screenshots
 
-#### Month
+#### Month Highlights
 <img src="assets/month.png" alt="Journal Dashboard Screenshots" width="600" />
 
 #### Sentiments
