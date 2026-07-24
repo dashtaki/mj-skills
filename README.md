@@ -24,7 +24,15 @@ An interactive work journal dashboard that reads your engineering journal and re
 
 ### Screenshots
 
-<img src="assets/screenshots.png" alt="Journal Dashboard Screenshots" width="600" />
+<img src="assets/month.png" alt="Journal Dashboard Screenshots" width="600" />
+
+<img src="assets/sentiment.png" alt="Journal Dashboard Screenshots" width="600" />
+
+<img src="assets/appreciation.png" alt="Journal Dashboard Screenshots" width="600" />
+
+<img src="assets/features.png" alt="Journal Dashboard Screenshots" width="600" />
+
+<img src="assets/pain-points.png" alt="Journal Dashboard Screenshots" width="600" />
 
 ## Install
 
