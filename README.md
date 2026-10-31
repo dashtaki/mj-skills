@@ -2,6 +2,17 @@
 
 A collection of custom skills for Claude Code and other AI coding agents.
 
+| Skill | What it does |
+|-------|--------------|
+| [Journal Dashboard](#journal-dashboard) | Turns your engineering journal into an interactive 9-tab dashboard |
+| [Feature Demo Video](#feature-demo-video) | Builds a polished product demo video (MP4 with music) of one feature |
+
+## Install
+
+```bash
+npx skills add dashtaki/mj-skills
+```
+
 ## Skills
 
 ### Journal Dashboard
@@ -22,26 +33,41 @@ An interactive work journal dashboard that reads your engineering journal and re
 | Collaboration | Teammate cards with interaction scores and tags |
 | Skills picked up | New tools, platforms, and techniques learned |
 
-### Screenshots
-
 <img src="assets/screenshots.png" alt="Journal Dashboard Screenshots" width="600" />
 
-## Install
+**Usage:** say `/journal`, "show my journal dashboard", "how was my week" or "analyze my journal". The skill reads your journal from Google Drive, a pasted text, or a local file.
 
-```bash
-npx skills add dashtaki/mj-skills
-```
+### Feature Demo Video
 
-## Usage
+Makes a 20–40 second launch video of one feature, like the ones Linear or Vercel post. It is not a screen recording. Claude rebuilds your app's UI in React with [Remotion](https://www.remotion.dev) and animates it: camera zoom, cursor clicks, typing, captions, an intro, an end card and calm background music.
 
-Once installed, trigger the journal skill in Claude Code by saying:
+<img src="assets/feature-demo-video.gif" alt="Feature Demo Video example" width="600" />
 
-- `/journal`
-- "show my journal dashboard"
-- "how was my week"
-- "analyze my journal"
+*Example output from the starter template (a made-up notes app).*
 
-The skill reads your journal from Google Drive, a pasted text, or a local file.
+**What you give it:**
+
+1. The steps to show, in order. Start where a real user starts, for example "Dashboard → Settings → Billing → change plan".
+2. The UI, as one of:
+   - screenshots of every state,
+   - a Figma link, or
+   - the app URL. Claude clicks through the app and takes the screenshots itself (needs a browser tool and a logged-in session).
+3. Optional: a short screen recording of app animations to match, your logo as SVG, a music mood.
+
+**What you get:** an MP4 (1920×1080, 30 fps) and the Remotion project, so you can change captions, timing or music later.
+
+**Usage:** say `/feature-demo-video`, "make a demo video of our new export feature", or "turn these screenshots into a launch video". If something is missing, the skill shows a short guide. Type `help` anytime to see it again.
+
+**Highlights:**
+
+- Starter project with ready parts: camera, cursor with click ripple, typing, word-blur placeholders, shimmer loaders, captions, intro, end card.
+- UI is laid out in the screenshot's own pixels, so it matches your app closely.
+- Music and click/typing sounds are synthesized with numpy, so there are no music license issues.
+- Checks key frames before the full render, and checks loudness after.
+
+**Requirements:** Node 18+ and Python 3 with numpy. ffmpeg is optional (used for frame and loudness checks). Remotion downloads its own headless browser on the first render.
+
+> **Remotion license:** Remotion is free for individuals, non-profits and companies with up to 3 employees. Larger companies need a [Remotion Company License](https://www.remotion.dev/license).
 
 ## License
 
