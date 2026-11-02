@@ -4,42 +4,12 @@ A collection of custom skills for Claude Code and other AI coding agents.
 
 ## Skills
 
-### Journal Dashboard
+| Skill | What it does |
+|-------|--------------|
+| [Journal Dashboard](skills/journal) | Turns your engineering journal into an interactive 9-tab dashboard |
+| [Feature Demo Video](skills/feature-demo-video) | Builds a polished product demo video (MP4 with music) of one feature |
 
-An interactive work journal dashboard that reads your engineering journal and renders a 9-tab dashboard with weekly highlights, sentiment tracking, appreciation, pain points, meeting load, feature delivery timelines, collaboration maps, and skills picked up.
-
-**Tabs:**
-
-| Tab | What it shows |
-|-----|---------------|
-| This week | Highlights and challenges for current + previous week |
-| Full month | Metric cards, shipped features, monthly summary |
-| Sentiment | Daily mood bars with positive/negative breakdown |
-| Appreciation | Positive feedback from teammates with quotes and dates |
-| Pain points | Recurring friction themes ranked by frequency |
-| Meeting load | Regular vs friction meetings per week |
-| Feature delivery | Gantt-style timeline colored by delivery speed |
-| Collaboration | Teammate cards with interaction scores and tags |
-| Skills picked up | New tools, platforms, and techniques learned |
-
----
-
-### Screenshots
-
-#### Month Highlights
-<img src="assets/month.png" alt="Journal Dashboard Screenshots" width="600" />
-
-#### Sentiments
-<img src="assets/sentiment.png" alt="Journal Dashboard Screenshots" width="600" />
-
-#### Appreciations
-<img src="assets/appreciation.png" alt="Journal Dashboard Screenshots" width="600" />
-
-#### Features
-<img src="assets/features.png" alt="Journal Dashboard Screenshots" width="600" />
-
-#### Pain Points
-<img src="assets/pain-points.png" alt="Journal Dashboard Screenshots" width="600" />
+Each skill folder has its own README with details, screenshots and usage.
 
 ## Install
 
@@ -47,16 +17,12 @@ An interactive work journal dashboard that reads your engineering journal and re
 npx skills add dashtaki/mj-skills
 ```
 
-## Usage
+## Add a new skill
 
-Once installed, trigger the journal skill in Claude Code by saying:
-
-- `/journal`
-- "show my journal dashboard"
-- "how was my week"
-- "analyze my journal"
-
-The skill reads your journal from Google Drive, a pasted text, or a local file.
+1. Create `skills/<skill-name>/SKILL.md` (instructions for the agent).
+2. Add `skills/<skill-name>/README.md` (docs for people).
+3. Put images in `assets/` at the repo root, so they are not copied into every install.
+4. Add one row to the table above.
 
 ## License
 

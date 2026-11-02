@@ -1,0 +1,22 @@
+{
+  "name": "feature-demo-video",
+  "private": true,
+  "scripts": {
+    "audio": "python3 scripts/make_audio.py src/timeline.json demo",
+    "studio": "remotion studio src/index.ts",
+    "still": "remotion still src/index.ts DemoVideo out/still.png",
+    "render": "remotion render src/index.ts DemoVideo out/demo.mp4 --crf=18"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.1.0",
+    "@remotion/cli": "4.0.300",
+    "lucide-react": "0.460.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.300"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "fps": 30,
+  "duration": 600,
+  "clicks": [
+    148,
+    214,
+    300,
+    380,
+    420
+  ],
+  "typing": [
+    {
+      "start": 154,
+      "speed": 0.35,
+      "text": "launch"
+    },
+    {
+      "start": 306,
+      "speed": 0.9,
+      "text": "Launch checklist for v2.4"
+    }
+  ],
+  "drumsIn": 72,
+  "endCard": 510
+}
