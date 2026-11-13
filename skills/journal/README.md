@@ -45,7 +45,7 @@ Say `/journal`, "show my journal dashboard", "how was my week" or "analyze my jo
 ## Install
 
 ```bash
-npx skills add dashtaki/mj-skills
+npx skills add dashtaki/mj-skills --skill journal
 ```
 
 Back to [all skills](../../README.md).

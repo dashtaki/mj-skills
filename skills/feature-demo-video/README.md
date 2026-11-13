@@ -35,7 +35,7 @@ Say `/feature-demo-video`, "make a demo video of our new export feature", or "tu
 ## Install
 
 ```bash
-npx skills add dashtaki/mj-skills
+npx skills add dashtaki/mj-skills --skill feature-demo-video
 ```
 
 Back to [all skills](../../README.md).
