@@ -6,7 +6,7 @@ A collection of custom skills for Claude Code and other AI coding agents.
 
 | Skill | What it does |
 |-------|--------------|
-| [Journal Dashboard](skills/journal) | Turns your engineering journal into an interactive 9-tab dashboard |
+| [Journal Dashboard](skills/journal) | Turns your engineering journal, Slack and GitHub activity into an interactive 9-tab dashboard |
 | [Feature Demo Video](skills/feature-demo-video) | Builds a polished product demo video (MP4 with music) of one feature |
 
 Each skill folder has its own README with details, screenshots and usage.

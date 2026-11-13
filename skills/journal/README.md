@@ -1,6 +1,16 @@
 # Journal Dashboard
 
-An interactive work journal dashboard that reads your engineering journal and renders a 9-tab dashboard with weekly highlights, sentiment tracking, appreciation, pain points, meeting load, feature delivery timelines, collaboration maps, and skills picked up.
+An interactive work dashboard that reads your engineering journal, your Slack and your GitHub activity and renders a 9-tab dashboard with weekly highlights, sentiment tracking, appreciation, pain points, meeting load, feature delivery timelines, collaboration maps, and skills picked up.
+
+**Sources** (pick one or combine several):
+
+| Source | What it adds | Needs |
+|--------|--------------|-------|
+| Journal | Your notes, feelings and context. Google Doc, pasted text or a .txt/.md file | Google Drive connector (only for Google Docs) |
+| Slack | Your messages, threads, mentions and praise from teammates | Slack connector |
+| GitHub | PRs you opened, reviewed and merged, plus review comments | GitHub connector or `gh` CLI |
+
+Default period is the last 30 days. Everything is read-only: the skill never posts, comments or changes anything.
 
 **Tabs:**
 
