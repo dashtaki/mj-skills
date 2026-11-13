@@ -1,33 +1,44 @@
 ---
 name: journal
-description: Reads the user's work journal (Google Drive doc, pasted text, or a .txt/.md file), analyzes it, and renders an interactive 9-tab dashboard with weekly highlights and lowlights, sentiment, appreciation, pain points, meeting load, feature delivery, collaboration and skills picked up. Use when the user says /journal, "show my journal dashboard", "analyze my journal", "how was my week", "what did I ship this week", "show highlights", "how am I doing at work", or otherwise wants a summary or reflection of a work period, even without saying "journal".
-compatibility: Google Drive connector recommended. Works without it via paste or file upload.
+description: Builds an interactive 9-tab work dashboard from the user's work journal (Google Drive doc, pasted text, or a .txt/.md file) and their Slack and GitHub activity, alone or combined. Shows weekly highlights and lowlights, sentiment, appreciation, pain points, meeting load, feature delivery, collaboration and skills picked up. Use when the user says /journal, "show my journal dashboard", "analyze my journal", "how was my week", "what did I ship this week", "summarize my Slack and GitHub activity", "show highlights", "how am I doing at work", or otherwise wants a summary or reflection of a work period, even without saying "journal".
+compatibility: Google Drive, Slack and GitHub connectors are optional. Each one adds a source. Works without any of them via paste or file upload.
 ---
 
 # Journal Dashboard Skill
 
 ## What this skill does
 
-1. Reads the user's work journal (from Google Drive, paste, or file)
-2. Claude analyzes the raw text and extracts structured data
+1. Reads the user's work journal (from Google Drive, paste, or file) and/or their
+   Slack and GitHub activity
+2. Claude analyzes everything and extracts structured data
 3. Renders an interactive dashboard with 9 tabs
 
 ---
 
 ## Step 0 — First time setup
 
-If this is the **first time** the user runs `/journal` in this conversation, Claude must ask:
+If this is the **first time** the user runs `/journal` in this conversation, Claude must ask
+which sources to use. The user can pick **one or several**; the dashboard combines them.
 
-> "To get started, I need access to your journal. How would you like to provide it?"
+> "To get started, which sources should I read? You can pick more than one."
 >
-> **Option A — Google Drive** (recommended): "Paste your Google Doc URL or file ID. Make sure you have the Google Drive connector enabled in Claude settings."
+> **Journal** (pick one):
+> - **Google Drive** (recommended): "Paste your Google Doc URL or file ID. Make sure the Google Drive connector is enabled in Claude settings."
+> - **Paste**: "Paste your journal text directly into the chat."
+> - **File**: "Upload a .txt or .md file with your journal entries."
 >
-> **Option B — Paste**: "Paste your journal text directly into the chat."
+> **Activity** (optional, adds facts the journal may miss):
+> - **Slack**: "I'll read your own messages, threads you took part in, and messages that mention you. Needs the Slack connector."
+> - **GitHub**: "I'll read pull requests you opened, reviewed or merged, and their review comments. Tell me which org or repos to include, or I'll use everything you can access. Needs the GitHub connector or the `gh` CLI."
 >
-> **Option C — File**: "Upload a .txt or .md file with your journal entries."
+> **Period**: "Which period? Default: the last 30 days."
 
-Once the user provides the source, remember it for the rest of the conversation.
-If the user has already provided their journal source earlier in the conversation, skip this step.
+Before asking, check which connectors are available and only offer the ones that work.
+If the user's request already names the sources (e.g. "how was my week on Slack and GitHub"),
+skip the question and use those. If no journal is given, Slack and/or GitHub alone are fine.
+
+Once the user provides the sources, remember them for the rest of the conversation.
+If the user has already provided their sources earlier in the conversation, skip this step.
 
 ### How to get the Google Doc file ID
 
@@ -59,6 +70,36 @@ If the tool is unavailable or fails:
 
 ### If paste or file:
 Use the text the user provided directly. No tool call needed.
+
+### If Slack:
+Use the Slack connector's search tool (e.g. `slack_search_public_and_private`, or
+`slack_search_public` if that is the only one). Limit every search to the chosen period:
+
+- `from:<@me> after:YYYY-MM-DD` — what the user said and worked on
+- `to:<@me> after:YYYY-MM-DD` and messages that @-mention the user — feedback, requests, praise
+- For busy threads the user took part in, read the thread for context.
+
+Resolve "me" to the user's Slack ID first if the tool needs it (e.g. look up their profile).
+Page through results until the period is covered, but stop at about 500 messages and say so.
+Read only. Never post, react or send messages from this skill.
+
+### If GitHub:
+Use the GitHub connector (MCP tools) if present, otherwise the `gh` CLI. Limit to the period
+and to the org/repos the user named. Collect:
+
+- PRs authored by the user: title, repo, created / merged / closed dates, state.
+  With `gh`: `gh search prs --author=@me --created=">=YYYY-MM-DD" --json title,repository,state,createdAt,closedAt,url`
+- PRs the user reviewed: `gh search prs --reviewed-by=@me --updated=">=YYYY-MM-DD"`
+- Review comments others left on the user's PRs (for appreciation and pain points).
+- Issues the user opened or closed, if relevant.
+
+Read only. Never comment, approve or change anything from this skill.
+
+### Combining sources
+Turn every Slack message and GitHub event into a dated line, in the same style as a
+journal entry, tagged with its source, e.g. `27.03 [GitHub] Merged PR "Add export to PDF" (web-app)`.
+Merge these with the journal entries by date, then continue with Step 2.
+The journal is the main source for feelings and context; Slack and GitHub add facts.
 
 ---
 
@@ -165,8 +206,26 @@ Analyze the full journal and produce a JSON object with this schema:
 **General:**
 - `sentiment` and `pos`/`neg`: pos + neg should sum to at most 90 (leave room for neutral).
 
-**Metrics** — if not mentioned in journal, set to 0 or omit:
-- `prs_opened` / `prs_reviewed`: count explicit PR mentions
+**Using Slack and GitHub data** (when those sources are used):
+- PR metrics: use GitHub counts, not journal mentions. GitHub is exact.
+- `features_shipped` and `features`: a merged PR (or group of PRs for one feature) counts as
+  shipped. `start` = first PR opened, `end` = last PR merged. Combine with journal mentions of
+  the same feature; don't count it twice.
+- `appreciation`: also include praise in Slack messages to/about the user and in PR review
+  comments (e.g. "great work", "thanks for fixing this", 🙏 / 🎉 replies with words).
+  Keep the quote short and use the sender's name.
+- `people`: Slack conversations, PR reviews in both directions and co-authored work all
+  add to `score`.
+- `pain_points`: also count themes in Slack (blocked, broken CI, flaky tests, "still waiting")
+  and in PRs (long review waits, many review rounds, reverted PRs).
+- `overtime_days`: Slack or GitHub activity clearly outside working hours (after 20:00 or on
+  weekends, in the user's time zone) can count, but only with 2+ events that day.
+- `sentiment`: base it on the journal when there is one. Slack/GitHub-only days get a neutral-ish
+  score unless the messages show a clear mood.
+- Ignore bots, automated messages and CI notifications.
+
+**Metrics** — if not mentioned in any source, set to 0 or omit:
+- `prs_opened` / `prs_reviewed`: count explicit PR mentions (or GitHub data, see above)
 - `overtime_days`: count days with explicit overtime or after-hours mentions
 - `features_shipped`: only count features that reached prod/merge
 
@@ -263,6 +322,10 @@ Examples:
 |-----------|----------|
 | Google Drive not connected | Ask user to connect it or paste journal text |
 | File ID invalid / access denied | Ask user to check sharing settings or paste text |
+| Slack not connected | Say so, offer to continue with the other sources, or ask the user to enable the Slack connector |
+| GitHub not connected and no `gh` CLI | Say so, offer to continue with the other sources, or ask the user to enable the GitHub connector |
+| Slack / GitHub returns nothing for the period | Note it in one line, render with the remaining sources |
+| Too many Slack messages | Stop at ~500, mention the dashboard is based on a sample |
 | Journal has no dates | Parse as a single period, label as "This period" |
 | Journal too short (< 3 days) | Render what's available, note limited data |
 | No PRs / features mentioned | Set counts to 0, skip those metrics gracefully |
